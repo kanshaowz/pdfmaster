@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="page-title">PDF Master - Free PDF Tools</title>
-    <meta name="description" content="Free online PDF tools. Merge, split, compress, convert PDF files. No upload to server, all processing in browser.">
+    <meta name="description" content="Free online PDF tools. Merge, split, compress PDF files. All processing in browser using pdf-lib.">
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/downloadjs@1.4.7/download.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root { --bg: #0f172a; --bg2: #1e293b; --card: #334155; --text: #f8fafc; --text2: #94a3b8; --accent: #ef4444; --success: #10b981; }
@@ -31,14 +33,25 @@
         .tool-desc { color: var(--text2); margin-bottom: 25px; }
         .upload-area { border: 3px dashed rgba(255,255,255,0.2); border-radius: 16px; padding: 50px 20px; text-align: center; cursor: pointer; transition: all 0.3s; }
         .upload-area:hover { border-color: var(--accent); background: rgba(239,68,68,0.05); }
+        .upload-area.dragover { border-color: var(--accent); background: rgba(239,68,68,0.1); }
         .btn { padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.3s; margin: 5px; }
         .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-secondary { background: var(--card); color: var(--text); border: 2px solid rgba(255,255,255,0.1); }
         .file-list { background: var(--card); border-radius: 10px; padding: 15px; margin: 20px 0; max-height: 200px; overflow-y: auto; }
         .file-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .file-item button { background:none;border:none;color:#ef4444;cursor:pointer;font-size:1.2rem; }
         .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--success); color: white; padding: 12px 24px; border-radius: 25px; opacity: 0; transition: all 0.3s; z-index: 1000; }
+        .toast.error { background: #ef4444; }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .progress { background: var(--card); border-radius: 10px; padding: 15px; margin: 20px 0; text-align: center; display: none; }
+        .progress.show { display: block; }
+        .progress-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
+        .input-field { width: 100%; background: var(--card); border: 2px solid transparent; border-radius: 10px; padding: 12px; color: var(--text); margin-top: 8px; }
+        .input-field:focus { outline: none; border-color: var(--accent); }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .page-info { background: var(--card); padding: 15px; border-radius: 10px; margin: 15px 0; }
         @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -60,8 +73,8 @@
     </header>
 
     <nav class="nav-tabs">
-        <button class="nav-tab active" onclick="switchTab('merge')" data-i18n="tabMerge">📎 Merge PDF</button>
-        <button class="nav-tab" onclick="switchTab('split')" data-i18n="tabSplit">✂️ Split PDF</button>
+        <button class="nav-tab active" onclick="switchTab('merge')" data-i18n="tabMerge">📎 Merge</button>
+        <button class="nav-tab" onclick="switchTab('split')" data-i18n="tabSplit">✂️ Split</button>
         <button class="nav-tab" onclick="switchTab('compress')" data-i18n="tabCompress">🗜️ Compress</button>
     </nav>
 
@@ -70,18 +83,23 @@
         <div id="merge-section" class="section active">
             <div class="tool-card">
                 <h2 class="tool-title" data-i18n="mergeTitle">📎 Merge PDF Files</h2>
-                <p class="tool-desc" data-i18n="mergeDesc">Combine multiple PDFs into one file. Drag to reorder.</p>
+                <p class="tool-desc" data-i18n="mergeDesc">Combine multiple PDFs into one. Select files in desired order.</p>
                 
-                <div class="upload-area" onclick="document.getElementById('mergeInput').click()">
+                <div class="upload-area" id="mergeDropZone" onclick="document.getElementById('mergeInput').click()">
                     <p style="font-size: 3rem">📎</p>
-                    <p data-i18n="selectPDFs">Select PDF files</p>
+                    <p data-i18n="dropText">Click or drag PDF files here</p>
                     <input type="file" id="mergeInput" accept=".pdf" multiple style="display:none" onchange="handleMergeFiles(event)">
                 </div>
 
                 <div class="file-list" id="mergeList" style="display:none"></div>
+                
+                <div class="progress" id="mergeProgress">
+                    <p data-i18n="processing">Processing...</p>
+                    <div class="progress-bar"><div class="progress-fill" id="mergeProgressBar"></div></div>
+                </div>
 
                 <div style="text-align:center;margin-top:20px">
-                    <button class="btn btn-primary" onclick="mergePDFs()" data-i18n="mergeBtn">📎 Merge PDFs</button>
+                    <button class="btn btn-primary" id="mergeBtn" onclick="mergePDFs()" data-i18n="mergeBtn">📎 Merge PDFs</button>
                 </div>
             </div>
         </div>
@@ -90,28 +108,36 @@
         <div id="split-section" class="section">
             <div class="tool-card">
                 <h2 class="tool-title" data-i18n="splitTitle">✂️ Split PDF</h2>
-                <p class="tool-desc" data-i18n="splitDesc">Extract specific pages or split into individual pages.</p>
+                <p class="tool-desc" data-i18n="splitDesc">Extract specific pages from PDF.</p>
                 
-                <div class="upload-area" onclick="document.getElementById('splitInput').click()">
+                <div class="upload-area" id="splitDropZone" onclick="document.getElementById('splitInput').click()">
                     <p style="font-size: 3rem">✂️</p>
-                    <p data-i18n="selectPDF">Select PDF file</p>
+                    <p data-i18n="dropText">Click or drag PDF file here</p>
                     <input type="file" id="splitInput" accept=".pdf" style="display:none" onchange="handleSplitFile(event)">
                 </div>
 
                 <div id="splitOptions" style="display:none;margin-top:20px">
+                    <div class="page-info">
+                        <p id="totalPages" style="color:var(--text2)"></p>
+                    </div>
+                    
                     <div class="grid-2">
                         <div>
                             <label data-i18n="fromPage">From Page:</label>
-                            <input type="number" id="fromPage" class="input-field" value="1" min="1" style="margin-top:8px">
+                            <input type="number" class="input-field" id="fromPage" value="1" min="1">
                         </div>
                         <div>
                             <label data-i18n="toPage">To Page:</label>
-                            <input type="number" id="toPage" class="input-field" value="1" min="1" style="margin-top:8px">
+                            <input type="number" class="input-field" id="toPage" value="1" min="1">
                         </div>
                     </div>
                     
+                    <div class="progress" id="splitProgress">
+                        <p data-i18n="processing">Processing...</p>
+                    </div>
+                    
                     <div style="text-align:center;margin-top:20px">
-                        <button class="btn btn-primary" onclick="splitPDF()" data-i18n="splitBtn">✂️ Split PDF</button>
+                        <button class="btn btn-primary" id="splitBtn" onclick="splitPDF()" data-i18n="splitBtn">✂️ Split PDF</button>
                     </div>
                 </div>
             </div>
@@ -121,19 +147,25 @@
         <div id="compress-section" class="section">
             <div class="tool-card">
                 <h2 class="tool-title" data-i18n="compressTitle">🗜️ Compress PDF</h2>
-                <p class="tool-desc" data-i18n="compressDesc">Reduce PDF file size while maintaining quality.</p>
+                <p class="tool-desc" data-i18n="compressDesc">Optimize PDF by removing duplicate objects and compressing streams.</p>
                 
-                <div class="upload-area" onclick="document.getElementById('compressInput').click()">
+                <div class="upload-area" id="compressDropZone" onclick="document.getElementById('compressInput').click()">
                     <p style="font-size: 3rem">🗜️</p>
-                    <p data-i18n="selectPDF">Select PDF file</p>
+                    <p data-i18n="dropText">Click or drag PDF file here</p>
                     <input type="file" id="compressInput" accept=".pdf" style="display:none" onchange="handleCompressFile(event)">
                 </div>
 
                 <div id="compressInfo" style="display:none;margin-top:20px">
-                    <p id="originalSize" style="color:var(--text2)"></p>
+                    <div class="page-info">
+                        <p id="compressFileInfo" style="color:var(--text2)"></p>
+                    </div>
+                    
+                    <div class="progress" id="compressProgress">
+                        <p data-i18n="processing">Processing...</p>
+                    </div>
                     
                     <div style="text-align:center;margin-top:20px">
-                        <button class="btn btn-primary" onclick="compressPDF()" data-i18n="compressBtn">🗜️ Compress</button>
+                        <button class="btn btn-primary" id="compressBtn" onclick="compressPDF()" data-i18n="compressBtn">🗜️ Compress PDF</button>
                     </div>
                 </div>
             </div>
@@ -143,18 +175,81 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        const { PDFDocument } = PDFLib;
+        
         const i18n = {
-            en: { title: '📄 PDF Master', subtitle: 'Free Online PDF Tools - Merge, Split, Compress', tabMerge: '📎 Merge', tabSplit: '✂️ Split', tabCompress: '🗜️ Compress', mergeTitle: '📎 Merge PDF Files', mergeDesc: 'Combine multiple PDFs into one file. Drag to reorder.', splitTitle: '✂️ Split PDF', splitDesc: 'Extract specific pages or split into individual pages.', compressTitle: '🗜️ Compress PDF', compressDesc: 'Reduce PDF file size while maintaining quality.', selectPDFs: 'Select PDF files', selectPDF: 'Select PDF file', mergeBtn: '📎 Merge PDFs', fromPage: 'From Page:', toPage: 'To Page:', splitBtn: '✂️ Split PDF', compressBtn: '🗜️ Compress', processing: 'Processing...', done: '✅ Done! Download started.', error: '❌ Error processing file.' },
-            zh: { title: '📄 PDF 大师', subtitle: '免费在线 PDF 工具 - 合并、拆分、压缩', tabMerge: '📎 合并', tabSplit: '✂️ 拆分', tabCompress: '🗜️ 压缩', mergeTitle: '📎 合并 PDF 文件', mergeDesc: '将多个 PDF 合并为一个文件。', splitTitle: '✂️ 拆分 PDF', splitDesc: '提取特定页面或拆分为单页。', compressTitle: '🗜️ 压缩 PDF', compressDesc: '在保持质量的同时减小文件大小。', selectPDFs: '选择 PDF 文件', selectPDF: '选择 PDF 文件', mergeBtn: '📎 合并 PDF', fromPage: '从第几页:', toPage: '到第几页:', splitBtn: '✂️ 拆分 PDF', compressBtn: '🗜️ 压缩', processing: '处理中...', done: '✅ 完成！开始下载。', error: '❌ 处理文件出错。' },
-            es: { title: '📄 PDF Master', subtitle: 'Herramientas PDF Gratuitas - Unir, Dividir, Comprimir', tabMerge: '📎 Unir', tabSplit: '✂️ Dividir', tabCompress: '🗜️ Comprimir', mergeTitle: '📎 Unir Archivos PDF', mergeDesc: 'Combina múltiples PDFs en un solo archivo.', splitTitle: '✂️ Dividir PDF', splitDesc: 'Extrae páginas específicas o divide en páginas individuales.', compressTitle: '🗜️ Comprimir PDF', compressDesc: 'Reduce el tamaño del archivo manteniendo la calidad.', selectPDFs: 'Seleccionar archivos PDF', selectPDF: 'Seleccionar archivo PDF', mergeBtn: '📎 Unir PDFs', fromPage: 'Desde página:', toPage: 'Hasta página:', splitBtn: '✂️ Dividir PDF', compressBtn: '🗜️ Comprimir', processing: 'Procesando...', done: '✅ ¡Listo! Descarga iniciada.', error: '❌ Error al procesar el archivo.' },
-            ja: { title: '📄 PDF マスター', subtitle: '無料オンライン PDF ツール - 結合、分割、圧縮', tabMerge: '📎 結合', tabSplit: '✂️ 分割', tabCompress: '🗜️ 圧縮', mergeTitle: '📎 PDF ファイルを結合', mergeDesc: '複数の PDF を 1 つにまとめます。', splitTitle: '✂️ PDF を分割', splitDesc: '特定のページを抽出または個別に分割します。', compressTitle: '🗜️ PDF を圧縮', compressDesc: '品質を維持しながらファイルサイズを縮小します。', selectPDFs: 'PDF ファイルを選択', selectPDF: 'PDF ファイルを選択', mergeBtn: '📎 PDF を結合', fromPage: '開始ページ:', toPage: '終了ページ:', splitBtn: '✂️ PDF を分割', compressBtn: '🗜️ 圧縮', processing: '処理中...', done: '✅ 完了！ダウンロードを開始しました。', error: '❌ ファイル処理エラー。' },
-            ko: { title: '📄 PDF 마스터', subtitle: '묣료 온라인 PDF 도구 - 병합, 분할, 압축', tabMerge: '📎 병합', tabSplit: '✂️ 분할', tabCompress: '🗜️ 압축', mergeTitle: '📎 PDF 파일 병합', mergeDesc: '여러 PDF를 하나로 결합합니다.', splitTitle: '✂️ PDF 분할', splitDesc: '특정 페이지를 추출하거나 개별로 분할합니다.', compressTitle: '🗜️ PDF 압축', compressDesc: '품질을 유지하면서 파일 크기를 줄입니다.', selectPDFs: 'PDF 파일 선택', selectPDF: 'PDF 파일 선택', mergeBtn: '📎 PDF 병합', fromPage: '시작 페이지:', toPage: '끝 페이지:', splitBtn: '✂️ PDF 분할', compressBtn: '🗜️ 압축', processing: '처리 중...', done: '✅ 완료! 다운로드 시작.', error: '❌ 파일 처리 오류.' }
+            en: { 
+                title: '📄 PDF Master', subtitle: 'Free Online PDF Tools - Merge, Split, Compress', 
+                tabMerge: '📎 Merge', tabSplit: '✂️ Split', tabCompress: '🗜️ Compress',
+                mergeTitle: '📎 Merge PDF Files', mergeDesc: 'Combine multiple PDFs into one. Select files in desired order.',
+                splitTitle: '✂️ Split PDF', splitDesc: 'Extract specific pages from PDF.',
+                compressTitle: '🗜️ Compress PDF', compressDesc: 'Optimize PDF by removing duplicate objects.',
+                dropText: 'Click or drag PDF files here', fromPage: 'From Page:', toPage: 'To Page:',
+                mergeBtn: '📎 Merge PDFs', splitBtn: '✂️ Split PDF', compressBtn: '🗜️ Compress PDF',
+                processing: 'Processing...', done: '✅ Done! Downloading...', error: '❌ Error: ',
+                selectFiles: 'Select at least 2 PDF files', selectFile: 'Please select a PDF file',
+                invalidRange: 'Invalid page range', pages: ' pages'
+            },
+            zh: { 
+                title: '📄 PDF 大师', subtitle: '免费在线 PDF 工具 - 合并、拆分、压缩',
+                tabMerge: '📎 合并', tabSplit: '✂️ 拆分', tabCompress: '🗜️ 压缩',
+                mergeTitle: '📎 合并 PDF 文件', mergeDesc: '将多个 PDF 合并为一个文件。按顺序选择文件。',
+                splitTitle: '✂️ 拆分 PDF', splitDesc: '从 PDF 中提取特定页面。',
+                compressTitle: '🗜️ 压缩 PDF', compressDesc: '通过移除重复对象优化 PDF。',
+                dropText: '点击或拖拽 PDF 文件到这里', fromPage: '从第几页:', toPage: '到第几页:',
+                mergeBtn: '📎 合并 PDF', splitBtn: '✂️ 拆分 PDF', compressBtn: '🗜️ 压缩 PDF',
+                processing: '处理中...', done: '✅ 完成！正在下载...', error: '❌ 错误：',
+                selectFiles: '请至少选择 2 个 PDF 文件', selectFile: '请选择一个 PDF 文件',
+                invalidRange: '无效的页码范围', pages: ' 页'
+            },
+            es: {
+                title: '📄 PDF Master', subtitle: 'Herramientas PDF Gratuitas - Unir, Dividir, Comprimir',
+                tabMerge: '📎 Unir', tabSplit: '✂️ Dividir', tabCompress: '🗜️ Comprimir',
+                mergeTitle: '📎 Unir Archivos PDF', mergeDesc: 'Combina múltiples PDFs en uno solo.',
+                splitTitle: '✂️ Dividir PDF', splitDesc: 'Extrae páginas específicas del PDF.',
+                compressTitle: '🗜️ Comprimir PDF', compressDesc: 'Optimiza PDF eliminando objetos duplicados.',
+                dropText: 'Haz clic o arrastra archivos PDF aquí', fromPage: 'Desde página:', toPage: 'Hasta página:',
+                mergeBtn: '📎 Unir PDFs', splitBtn: '✂️ Dividir PDF', compressBtn: '🗜️ Comprimir PDF',
+                processing: 'Procesando...', done: '✅ ¡Listo! Descargando...', error: '❌ Error: ',
+                selectFiles: 'Selecciona al menos 2 archivos PDF', selectFile: 'Selecciona un archivo PDF',
+                invalidRange: 'Rango de páginas inválido', pages: ' páginas'
+            },
+            ja: {
+                title: '📄 PDF マスター', subtitle: '無料オンライン PDF ツール - 結合、分割、圧縮',
+                tabMerge: '📎 結合', tabSplit: '✂️ 分割', tabCompress: '🗜️ 圧縮',
+                mergeTitle: '📎 PDF ファイルを結合', mergeDesc: '複数の PDF を 1 つにまとめます。',
+                splitTitle: '✂️ PDF を分割', splitDesc: 'PDF から特定のページを抽出します。',
+                compressTitle: '🗜️ PDF を圧縮', compressDesc: '重複オブジェクトを削除して PDF を最適化します。',
+                dropText: 'クリックまたは PDF ファイルをドラッグ', fromPage: '開始ページ:', toPage: '終了ページ:',
+                mergeBtn: '📎 PDF を結合', splitBtn: '✂️ PDF を分割', compressBtn: '🗜️ PDF を圧縮',
+                processing: '処理中...', done: '✅ 完了！ダウンロード中...', error: '❌ エラー：',
+                selectFiles: 'PDF ファイルを 2 つ以上選択してください', selectFile: 'PDF ファイルを選択してください',
+                invalidRange: '無効なページ範囲', pages: ' ページ'
+            },
+            ko: {
+                title: '📄 PDF 마스터', subtitle: '묣료 온라인 PDF 도구 - 병합, 분할, 압축',
+                tabMerge: '📎 병합', tabSplit: '✂️ 분할', tabCompress: '🗜️ 압축',
+                mergeTitle: '📎 PDF 파일 병합', mergeDesc: '여러 PDF를 하나로 결합합니다.',
+                splitTitle: '✂️ PDF 분할', splitDesc: 'PDF에서 특정 페이지를 추출합니다.',
+                compressTitle: '🗜️ PDF 압축', compressDesc: '중복 객체를 제거하여 PDF를 최적화합니다.',
+                dropText: '클릭 또는 PDF 파일 드래그', fromPage: '시작 페이지:', toPage: '끝 페이지:',
+                mergeBtn: '📎 PDF 병합', splitBtn: '✂️ PDF 분할', compressBtn: '🗜️ PDF 압축',
+                processing: '처리 중...', done: '✅ 완료! 다운로드 중...', error: '❌ 오류: ',
+                selectFiles: 'PDF 파일을 2개 이상 선택하세요', selectFile: 'PDF 파일을 선택하세요',
+                invalidRange: '유효하지 않은 페이지 범위', pages: ' 페이지'
+            }
         };
 
         let currentLang = localStorage.getItem('lang') || 'en';
         let mergeFiles = [];
-        let splitFile = null;
-        let compressFile = null;
+        let splitPdfDoc = null;
+        let splitFileName = '';
+        let compressPdfDoc = null;
+        let compressFileName = '';
+
+        // Initialize
+        setLang(currentLang);
+        setupDragDrop();
 
         function setLang(lang) {
             currentLang = lang;
@@ -174,9 +269,43 @@
         function toggleLang() { document.getElementById('langDropdown').classList.toggle('show'); }
         document.addEventListener('click', e => { if (!e.target.closest('.lang')) document.getElementById('langDropdown').classList.remove('show'); });
 
-        function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
-        function switchTab(tab) { document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.section').forEach(s => s.classList.remove('active')); document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active'); document.getElementById(tab + '-section').classList.add('active'); }
+        function showToast(msg, isError = false) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast' + (isError ? ' error' : '');
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
 
+        function switchTab(tab) {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById(tab + '-section').classList.add('active');
+        }
+
+        function setupDragDrop() {
+            ['mergeDropZone', 'splitDropZone', 'compressDropZone'].forEach(id => {
+                const zone = document.getElementById(id);
+                zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+                zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+                zone.addEventListener('drop', e => {
+                    e.preventDefault();
+                    zone.classList.remove('dragover');
+                    const files = e.dataTransfer.files;
+                    if (id === 'mergeDropZone' && files.length > 0) {
+                        mergeFiles = Array.from(files).filter(f => f.type === 'application/pdf');
+                        updateMergeList();
+                    } else if (id === 'splitDropZone' && files.length === 1) {
+                        handleSplitFile({ target: { files: [files[0]] } });
+                    } else if (id === 'compressDropZone' && files.length === 1) {
+                        handleCompressFile({ target: { files: [files[0]] } });
+                    }
+                });
+            });
+        }
+
+        // ==================== MERGE ====================
         function handleMergeFiles(e) {
             mergeFiles = Array.from(e.target.files);
             updateMergeList();
@@ -188,67 +317,170 @@
             list.innerHTML = mergeFiles.map((f, i) => `
                 <div class="file-item">
                     <span>${i+1}. ${f.name} (${(f.size/1024).toFixed(1)} KB)</span>
-                    <button onclick="removeFile(${i})" style="background:none;border:none;color:#ef4444;cursor:pointer">✕</button>
+                    <button onclick="removeFile(${i})" title="Remove">✕</button>
                 </div>
             `).join('');
             list.style.display = 'block';
         }
 
-        function removeFile(i) { mergeFiles.splice(i, 1); updateMergeList(); }
-
-        function mergePDFs() {
-            if (mergeFiles.length < 2) { showToast('Select at least 2 files'); return; }
-            showToast(i18n[currentLang].processing);
-            setTimeout(() => {
-                const blob = new Blob(['PDF merge simulation'], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = 'merged.pdf'; a.click();
-                URL.revokeObjectURL(url);
-                showToast(i18n[currentLang].done);
-            }, 1500);
+        function removeFile(i) { 
+            mergeFiles.splice(i, 1); 
+            updateMergeList(); 
         }
 
-        function handleSplitFile(e) {
-            splitFile = e.target.files[0];
-            if (splitFile) {
+        async function mergePDFs() {
+            if (mergeFiles.length < 2) { 
+                showToast(i18n[currentLang].selectFiles, true); 
+                return; 
+            }
+
+            const btn = document.getElementById('mergeBtn');
+            const progress = document.getElementById('mergeProgress');
+            const progressBar = document.getElementById('mergeProgressBar');
+            
+            btn.disabled = true;
+            progress.classList.add('show');
+            
+            try {
+                const mergedPdf = await PDFDocument.create();
+                
+                for (let i = 0; i < mergeFiles.length; i++) {
+                    const file = mergeFiles[i];
+                    const fileBytes = await file.arrayBuffer();
+                    const pdf = await PDFDocument.load(fileBytes);
+                    const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                    pages.forEach(page => mergedPdf.addPage(page));
+                    
+                    progressBar.style.width = ((i + 1) / mergeFiles.length * 100) + '%';
+                }
+                
+                const mergedPdfBytes = await mergedPdf.save();
+                const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+                download(blob, 'merged.pdf', 'application/pdf');
+                
+                showToast(i18n[currentLang].done);
+            } catch (error) {
+                showToast(i18n[currentLang].error + error.message, true);
+            } finally {
+                btn.disabled = false;
+                progress.classList.remove('show');
+                progressBar.style.width = '0%';
+            }
+        }
+
+        // ==================== SPLIT ====================
+        async function handleSplitFile(e) {
+            const file = e.target.files[0];
+            if (!file || file.type !== 'application/pdf') {
+                showToast(i18n[currentLang].selectFile, true);
+                return;
+            }
+            
+            try {
+                const fileBytes = await file.arrayBuffer();
+                splitPdfDoc = await PDFDocument.load(fileBytes);
+                splitFileName = file.name.replace('.pdf', '');
+                
+                const totalPages = splitPdfDoc.getPageCount();
+                document.getElementById('totalPages').textContent = 
+                    i18n[currentLang].totalPages?.replace('{0}', totalPages) || `Total: ${totalPages} pages`;
+                document.getElementById('fromPage').value = 1;
+                document.getElementById('toPage').value = totalPages;
+                document.getElementById('toPage').max = totalPages;
                 document.getElementById('splitOptions').style.display = 'block';
-                document.getElementById('toPage').value = '10';
+            } catch (error) {
+                showToast(i18n[currentLang].error + error.message, true);
             }
         }
 
-        function splitPDF() {
-            if (!splitFile) return;
-            showToast(i18n[currentLang].processing);
-            setTimeout(() => {
-                const blob = new Blob(['PDF split simulation'], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = 'split.pdf'; a.click();
-                URL.revokeObjectURL(url);
+        async function splitPDF() {
+            if (!splitPdfDoc) return;
+            
+            const fromPage = parseInt(document.getElementById('fromPage').value);
+            const toPage = parseInt(document.getElementById('toPage').value);
+            const totalPages = splitPdfDoc.getPageCount();
+            
+            if (fromPage < 1 || toPage > totalPages || fromPage > toPage) {
+                showToast(i18n[currentLang].invalidRange, true);
+                return;
+            }
+            
+            const btn = document.getElementById('splitBtn');
+            const progress = document.getElementById('splitProgress');
+            
+            btn.disabled = true;
+            progress.classList.add('show');
+            
+            try {
+                const newPdf = await PDFDocument.create();
+                const pages = await newPdf.copyPages(splitPdfDoc, 
+                    Array.from({length: toPage - fromPage + 1}, (_, i) => fromPage - 1 + i));
+                pages.forEach(page => newPdf.addPage(page));
+                
+                const pdfBytes = await newPdf.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                download(blob, `${splitFileName}_pages_${fromPage}-${toPage}.pdf`, 'application/pdf');
+                
                 showToast(i18n[currentLang].done);
-            }, 1500);
+            } catch (error) {
+                showToast(i18n[currentLang].error + error.message, true);
+            } finally {
+                btn.disabled = false;
+                progress.classList.remove('show');
+            }
         }
 
-        function handleCompressFile(e) {
-            compressFile = e.target.files[0];
-            if (compressFile) {
+        // ==================== COMPRESS ====================
+        async function handleCompressFile(e) {
+            const file = e.target.files[0];
+            if (!file || file.type !== 'application/pdf') {
+                showToast(i18n[currentLang].selectFile, true);
+                return;
+            }
+            
+            try {
+                const fileBytes = await file.arrayBuffer();
+                compressPdfDoc = await PDFDocument.load(fileBytes);
+                compressFileName = file.name.replace('.pdf', '');
+                
+                const originalSize = (file.size / 1024).toFixed(1);
+                document.getElementById('compressFileInfo').textContent = 
+                    `Original: ${originalSize} KB | ${compressPdfDoc.getPageCount()} pages`;
                 document.getElementById('compressInfo').style.display = 'block';
-                document.getElementById('originalSize').textContent = `Original: ${(compressFile.size/1024).toFixed(1)} KB`;
+            } catch (error) {
+                showToast(i18n[currentLang].error + error.message, true);
             }
         }
 
-        function compressPDF() {
-            if (!compressFile) return;
-            showToast(i18n[currentLang].processing);
-            setTimeout(() => {
-                const blob = new Blob(['PDF compress simulation'], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = 'compressed.pdf'; a.click();
-                URL.revokeObjectURL(url);
-                showToast(i18n[currentLang].done);
-            }, 1500);
+        async function compressPDF() {
+            if (!compressPdfDoc) return;
+            
+            const btn = document.getElementById('compressBtn');
+            const progress = document.getElementById('compressProgress');
+            
+            btn.disabled = true;
+            progress.classList.add('show');
+            
+            try {
+                // Optimize PDF by using object streams and compressing
+                const pdfBytes = await compressPdfDoc.save({
+                    useObjectStreams: true,
+                    addDefaultPage: false,
+                    preserveExistingEncryption: false
+                });
+                
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const newSize = (blob.size / 1024).toFixed(1);
+                download(blob, `${compressFileName}_compressed.pdf`, 'application/pdf');
+                
+                showToast(i18n[currentLang].done + ` (${newSize} KB)`);
+            } catch (error) {
+                showToast(i18n[currentLang].error + error.message, true);
+            } finally {
+                btn.disabled = false;
+                progress.classList.remove('show');
+            }
         }
-
-        setLang(currentLang);
     </script>
 </body>
 </html>
