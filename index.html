@@ -46,6 +46,31 @@
             --glow-success: 0 0 20px rgba(34, 197, 94, 0.3);
         }
 
+        /* Dark Mode */
+        .dark-mode {
+            --primary: #ff4d55;
+            --primary-dark: #e31b23;
+            --primary-light: #ff6b6b;
+            --secondary: #ff8c5a;
+            --accent: #ffb347;
+            --bg: #0f172a;
+            --bg-light: #1e293b;
+            --bg-dark: #334155;
+            --text: #f1f5f9;
+            --text-light: #94a3b8;
+            --text-muted: #64748b;
+            --border: #334155;
+            --success: #34d399;
+            --warning: #fbbf24;
+            --error: #f87171;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -4px rgba(0,0,0,0.4);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.4);
+            --glow-primary: 0 0 20px rgba(255, 77, 85, 0.4);
+            --glow-success: 0 0 20px rgba(52, 211, 153, 0.4);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -1358,6 +1383,10 @@
                     <i class="fas fa-tools"></i>
                     <span>工具</span>
                 </button>
+                <button class="nav-btn" id="darkModeBtn" onclick="toggleDarkMode()" title="切换主题">
+                    <i class="fas fa-moon"></i>
+                    <span>主题</span>
+                </button>
             </nav>
         </div>
     </header>
@@ -2545,6 +2574,35 @@
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
+
+        // Dark Mode
+        const STORAGE_KEY = 'pdfmaster-theme';
+        const DARK_CLASS = 'dark-mode';
+
+        function initDarkMode() {
+            const savedTheme = localStorage.getItem(STORAGE_KEY);
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.documentElement.classList.add(DARK_CLASS);
+                updateDarkModeIcon(true);
+            }
+        }
+
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle(DARK_CLASS);
+            localStorage.setItem(STORAGE_KEY, isDark ? 'dark' : 'light');
+            updateDarkModeIcon(isDark);
+        }
+
+        function updateDarkModeIcon(isDark) {
+            const btn = document.querySelector('#darkModeBtn i');
+            if (btn) {
+                btn.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+
+        // Initialize
+        initDarkMode();
     </script>
     
     <!-- Footer -->
