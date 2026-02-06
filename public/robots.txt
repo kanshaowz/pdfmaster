@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://kanshaowz.github.io/pdfmaster/sitemap.xml

@@ -1,0 +1,2557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Master - 免费在线PDF工具</title>
+    <meta name="description" content="免费在线PDF工具箱。合并、拆分、压缩、旋转、删除页面等所有操作都在浏览器本地完成，保护您的隐私。">
+    
+    <!-- PDF Libraries -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/downloadjs@1.4.7/download.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #e31b23;
+            --primary-dark: #c41820;
+            --primary-light: #ff4d55;
+            --secondary: #ff6b35;
+            --accent: #f7931e;
+            --bg: #fafafa;
+            --bg-light: #ffffff;
+            --bg-dark: #f0f0f0;
+            --text: #1a1a1a;
+            --text-light: #666666;
+            --text-muted: #999999;
+            --border: #e0e0e0;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+            
+            /* Transitions */
+            --transition-fast: 0.15s ease;
+            --transition-base: 0.3s ease;
+            --transition-slow: 0.5s ease;
+            
+            /* Glow Effects */
+            --glow-primary: 0 0 20px rgba(227, 27, 35, 0.3);
+            --glow-success: 0 0 20px rgba(34, 197, 94, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(ellipse at 10% 20%, rgba(227, 27, 35, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 90% 80%, rgba(247, 147, 30, 0.03) 0%, transparent 50%);
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 5px;
+            border: 2px solid var(--bg-dark);
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+        
+        /* Selection */
+        ::selection {
+            background: rgba(227, 27, 35, 0.2);
+            color: var(--primary-dark);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 0;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-top {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: white;
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: var(--primary);
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-tagline {
+            font-size: 0.75rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-1px);
+        }
+
+        .nav-btn.active {
+            background: white;
+            color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, #8b1538 100%);
+            color: white;
+            padding: 60px 24px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            opacity: 0.3;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            opacity: 0.95;
+            margin-bottom: 32px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-badges {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .hero-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .hero-badge i {
+            font-size: 1.1rem;
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* Tools Grid */
+        .tools-section {
+            margin-bottom: 60px;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .section-subtitle {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .tool-card {
+            background: var(--bg-light);
+            border-radius: 16px;
+            padding: 32px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary);
+        }
+
+        .tool-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .tool-card.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .tool-card.active .tool-icon {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .tool-card.active .tool-desc {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .tool-icon {
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 32px;
+            color: var(--primary);
+            transition: all 0.3s;
+        }
+
+        .tool-card:hover .tool-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .tool-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .tool-desc {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Workspace */
+        .workspace {
+            background: var(--bg-light);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            margin-top: 40px;
+            display: none;
+        }
+
+        .workspace.active {
+            display: block;
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .workspace-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 24px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .workspace-title {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .workspace-title i {
+            font-size: 28px;
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .workspace-title h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .workspace-title p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .close-workspace {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+
+        .close-workspace:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(90deg);
+        }
+
+        .workspace-body {
+            padding: 32px;
+        }
+
+        /* Steps Indicator */
+        .steps-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 40px;
+            gap: 16px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            background: var(--bg-dark);
+            border-radius: 50px;
+            color: var(--text-muted);
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .step.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: var(--shadow);
+        }
+
+        .step.completed {
+            background: var(--success);
+            color: white;
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            background: currentColor;
+            color: var(--bg-dark);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .step.active .step-number,
+        .step.completed .step-number {
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        .step-connector {
+            width: 40px;
+            height: 2px;
+            background: var(--border);
+            position: relative;
+        }
+
+        .step-connector::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0;
+            background: var(--success);
+            transition: width 0.5s;
+        }
+
+        .step-connector.completed::after {
+            width: 100%;
+        }
+
+        /* Upload Area */
+        .upload-container {
+            margin-bottom: 32px;
+        }
+
+        .upload-area {
+            border: 3px dashed var(--border);
+            border-radius: 20px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, var(--bg) 0%, var(--bg-light) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(227,27,35,0.03) 0%, rgba(255,107,53,0.03) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            transform: scale(1.01);
+        }
+
+        .upload-area:hover::before {
+            opacity: 1;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(227,27,35,0.08) 0%, rgba(255,107,53,0.08) 100%);
+            transform: scale(1.02);
+        }
+
+        .upload-area.dragover::before {
+            opacity: 1;
+        }
+
+        .upload-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 40px;
+            color: white;
+            box-shadow: var(--shadow-lg);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .upload-area.dragover .upload-icon {
+            animation: bounce 0.5s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .upload-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .upload-subtitle {
+            color: var(--text-light);
+            margin-bottom: 24px;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: var(--shadow);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .upload-formats {
+            margin-top: 16px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* File List */
+        .file-list-container {
+            background: var(--bg);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .file-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .file-list-title {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .file-count {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            background: var(--bg-light);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s;
+        }
+
+        .file-item:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .file-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #fee 0%, #fcc 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+
+        .file-meta {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            display: flex;
+            gap: 16px;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .file-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: var(--bg);
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-light);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .file-btn.remove:hover {
+            background: var(--error);
+        }
+
+        /* PDF Preview */
+        .preview-container {
+            background: var(--bg);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .preview-title {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .preview-nav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .preview-btn {
+            width: 36px;
+            height: 36px;
+            border: 2px solid var(--border);
+            background: var(--bg-light);
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .preview-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .preview-counter {
+            font-weight: 600;
+            color: var(--text);
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .preview-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            aspect-ratio: 1/1.414;
+            max-height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .preview-placeholder {
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .preview-placeholder i {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        /* Options Panel */
+        .options-panel {
+            background: var(--bg);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .options-title {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .option-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .option-input {
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: var(--bg-light);
+            color: var(--text);
+            transition: all 0.2s;
+        }
+
+        .option-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(227,27,35,0.1);
+        }
+
+        .option-hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Page Thumbnails Grid */
+        .pages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .page-thumbnail {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .page-thumbnail:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .page-thumbnail.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(227,27,35,0.2);
+        }
+
+        .page-thumbnail canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .page-number {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px;
+            font-size: 0.75rem;
+            text-align: center;
+        }
+
+        .page-checkbox {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            accent-color: var(--primary);
+        }
+
+        /* Action Buttons */
+        .action-bar {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: var(--shadow);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #16a34a 100%);
+            color: white;
+        }
+
+        /* Progress */
+        .progress-container {
+            background: var(--bg);
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .progress-spinner {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            position: relative;
+        }
+
+        .progress-spinner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .progress-text {
+            color: var(--text-light);
+            margin-bottom: 24px;
+        }
+
+        .progress-bar-container {
+            background: var(--border);
+            border-radius: 10px;
+            height: 10px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-percent {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Result Panel */
+        .result-container {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 2px solid var(--success);
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .result-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 36px;
+            color: white;
+            animation: scaleIn 0.5s ease;
+        }
+
+        @keyframes scaleIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 8px;
+        }
+
+        .result-info {
+            color: #15803d;
+            margin-bottom: 24px;
+        }
+
+        .result-stats {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #166534;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #15803d;
+        }
+
+        /* Features Section */
+        .features-section {
+            background: var(--bg-light);
+            border-radius: 24px;
+            padding: 60px 40px;
+            margin-top: 60px;
+            box-shadow: var(--shadow);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .feature {
+            text-align: center;
+        }
+
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 28px;
+            color: var(--primary);
+        }
+
+        .feature h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .feature p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--text);
+            color: white;
+            padding: 40px 24px;
+            margin-top: 80px;
+            text-align: center;
+        }
+
+        .footer p {
+            opacity: 0.8;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--text);
+            color: white;
+            padding: 16px 28px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-xl);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10000;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.error {
+            background: var(--error);
+        }
+
+        .toast.warning {
+            background: var(--warning);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .tools-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+
+            .tool-card {
+                padding: 24px 16px;
+            }
+
+            .tool-icon {
+                width: 56px;
+                height: 56px;
+                font-size: 24px;
+            }
+
+            .tool-name {
+                font-size: 1rem;
+            }
+
+            .tool-desc {
+                font-size: 0.8rem;
+            }
+
+            .workspace-header {
+                flex-direction: column;
+                text-align: center;
+                gap: 16px;
+            }
+
+            .steps-indicator {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .step-connector {
+                width: 2px;
+                height: 20px;
+            }
+
+            .upload-area {
+                padding: 40px 24px;
+            }
+
+            .pages-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Loading overlay for canvas */
+        .canvas-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-muted);
+        }
+        
+        /* Footer */
+        .footer {
+            background: linear-gradient(135deg, var(--text) 0%, #2a2a2a 100%);
+            color: white;
+            padding: 32px 24px;
+            margin-top: auto;
+        }
+        
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .footer p {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.9rem;
+        }
+        
+        /* Smooth Scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Focus Visible */
+        :focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .animate-pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-top">
+            <a href="#" class="logo" onclick="showHome()">
+                <div class="logo-icon">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <div>
+                    <div class="logo-text">PDF Master</div>
+                    <div class="logo-tagline">免费在线PDF工具</div>
+                </div>
+            </a>
+            <nav class="header-nav">
+                <button class="nav-btn" onclick="showHome()">
+                    <i class="fas fa-home"></i>
+                    <span>首页</span>
+                </button>
+                <button class="nav-btn" onclick="scrollToTools()">
+                    <i class="fas fa-tools"></i>
+                    <span>工具</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>免费的 PDF 工具箱</h1>
+            <p>合并、拆分、压缩、旋转、删除页面——所有操作都在浏览器本地完成，保护您的隐私安全</p>
+            <div class="hero-badges">
+                <div class="hero-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>100% 本地处理</span>
+                </div>
+                <div class="hero-badge">
+                    <i class="fas fa-bolt"></i>
+                    <span>极速处理</span>
+                </div>
+                <div class="hero-badge">
+                    <i class="fas fa-infinity"></i>
+                    <span>完全免费</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <!-- Tools Grid -->
+        <section class="tools-section" id="tools">
+            <div class="section-header">
+                <h2 class="section-title">选择工具</h2>
+                <p class="section-subtitle">点击选择您需要的 PDF 工具</p>
+            </div>
+            
+            <div class="tools-grid">
+                <div class="tool-card" data-tool="merge" onclick="selectTool('merge')">
+                    <div class="tool-icon">
+                        <i class="fas fa-object-group"></i>
+                    </div>
+                    <div class="tool-name">合并 PDF</div>
+                    <div class="tool-desc">将多个 PDF 文件合并为一个文件</div>
+                </div>
+
+                <div class="tool-card" data-tool="split" onclick="selectTool('split')">
+                    <div class="tool-icon">
+                        <i class="fas fa-cut"></i>
+                    </div>
+                    <div class="tool-name">拆分 PDF</div>
+                    <div class="tool-desc">按页码范围提取页面</div>
+                </div>
+
+                <div class="tool-card" data-tool="compress" onclick="selectTool('compress')">
+                    <div class="tool-icon">
+                        <i class="fas fa-compress-alt"></i>
+                    </div>
+                    <div class="tool-name">压缩 PDF</div>
+                    <div class="tool-desc">优化 PDF 文件大小</div>
+                </div>
+
+                <div class="tool-card" data-tool="rotate" onclick="selectTool('rotate')">
+                    <div class="tool-icon">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                    <div class="tool-name">旋转 PDF</div>
+                    <div class="tool-desc">旋转页面方向 90° / 180° / 270°</div>
+                </div>
+
+                <div class="tool-card" data-tool="delete" onclick="selectTool('delete')">
+                    <div class="tool-icon">
+                        <i class="fas fa-trash-alt"></i>
+                    </div>
+                    <div class="tool-name">删除页面</div>
+                    <div class="tool-desc">删除 PDF 中的指定页面</div>
+                </div>
+
+                <div class="tool-card" data-tool="extract" onclick="selectTool('extract')">
+                    <div class="tool-icon">
+                        <i class="fas fa-file-export"></i>
+                    </div>
+                    <div class="tool-name">提取页面</div>
+                    <div class="tool-desc">将指定页面保存为新文件</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Workspace -->
+        <div class="workspace" id="workspace">
+            <div class="workspace-header">
+                <div class="workspace-title">
+                    <i id="workspace-icon" class="fas fa-object-group"></i>
+                    <div>
+                        <h2 id="workspace-title">合并 PDF</h2>
+                        <p id="workspace-desc">将多个 PDF 文件合并为一个文件</p>
+                    </div>
+                </div>
+                <button class="close-workspace" onclick="closeWorkspace()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="workspace-body">
+                <!-- Steps -->
+                <div class="steps-indicator">
+                    <div class="step active" id="step1">
+                        <span class="step-number">1</span>
+                        <span>上传文件</span>
+                    </div>
+                    <div class="step-connector" id="conn1"></div>
+                    <div class="step" id="step2">
+                        <span class="step-number">2</span>
+                        <span>处理</span>
+                    </div>
+                    <div class="step-connector" id="conn2"></div>
+                    <div class="step" id="step3">
+                        <span class="step-number">3</span>
+                        <span>下载</span>
+                    </div>
+                </div>
+
+                <!-- Upload Section -->
+                <div class="upload-container" id="uploadSection">
+                    <div class="upload-area" id="dropZone">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="upload-title">拖拽文件到此处</div>
+                        <div class="upload-subtitle">或者点击选择文件</div>
+                        <button class="upload-btn">
+                            <i class="fas fa-folder-open"></i>
+                            选择文件
+                        </button>
+                        <div class="upload-formats">
+                            <i class="fas fa-info-circle"></i>
+                            支持 PDF 格式，文件在浏览器本地处理
+                        </div>
+                        <input type="file" id="fileInput" accept=".pdf" style="display: none;">
+                    </div>
+                </div>
+
+                <!-- File List -->
+                <div class="file-list-container hidden" id="fileListSection">
+                    <div class="file-list-header">
+                        <span class="file-list-title">已选择的文件</span>
+                        <span class="file-count" id="fileCount">0 个文件</span>
+                    </div>
+                    <div class="file-list" id="fileList"></div>
+                    <div style="margin-top: 16px; text-align: center;">
+                        <button class="btn btn-secondary" onclick="addMoreFiles()">
+                            <i class="fas fa-plus"></i>
+                            添加更多文件
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preview Section -->
+                <div class="preview-container hidden" id="previewSection">
+                    <div class="preview-header">
+                        <span class="preview-title">文件预览</span>
+                        <div class="preview-nav">
+                            <button class="preview-btn" id="prevPage" onclick="prevPage()">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <span class="preview-counter" id="pageCounter">1 / 1</span>
+                            <button class="preview-btn" id="nextPage" onclick="nextPage()">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="preview-content" id="previewContent">
+                        <canvas class="preview-canvas" id="previewCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Pages Grid (for delete/extract) -->
+                <div class="preview-container hidden" id="pagesGridSection">
+                    <div class="preview-header">
+                        <span class="preview-title">选择页面</span>
+                        <div>
+                            <button class="btn btn-secondary" onclick="selectAllPages()" style="padding: 8px 16px; font-size: 0.9rem;">
+                                全选
+                            </button>
+                            <button class="btn btn-secondary" onclick="deselectAllPages()" style="padding: 8px 16px; font-size: 0.9rem;">
+                                取消全选
+                            </button>
+                        </div>
+                    </div>
+                    <div class="pages-grid" id="pagesGrid"></div>
+                </div>
+
+                <!-- Options Panel -->
+                <div class="options-panel hidden" id="optionsSection">
+                    <div class="options-title">
+                        <i class="fas fa-cog"></i>
+                        处理选项
+                    </div>
+                    <div class="options-grid" id="optionsGrid">
+                        <!-- Dynamic options -->
+                    </div>
+                </div>
+
+                <!-- Progress Section -->
+                <div class="progress-container hidden" id="progressSection">
+                    <div class="progress-spinner"></div>
+                    <div class="progress-title">正在处理...</div>
+                    <div class="progress-text" id="progressText">请稍候</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-percent" id="progressPercent">0%</div>
+                </div>
+
+                <!-- Result Section -->
+                <div class="result-container hidden" id="resultSection">
+                    <div class="result-icon">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="result-title">处理完成！</div>
+                    <div class="result-info" id="resultInfo">您的文件已准备就绪</div>
+                    <div class="result-stats" id="resultStats"></div>
+                    <div class="action-bar">
+                        <button class="btn btn-success" onclick="downloadResult()">
+                            <i class="fas fa-download"></i>
+                            下载文件
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetTool()">
+                            <i class="fas fa-redo"></i>
+                            处理更多文件
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="action-bar" id="actionBar">
+                    <button class="btn btn-primary" id="processBtn" onclick="processFiles()" disabled>
+                        <i class="fas fa-play"></i>
+                        开始处理
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetTool()">
+                        <i class="fas fa-trash"></i>
+                        重置
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <section class="features-section">
+            <div class="section-header">
+                <h2 class="section-title">为什么选择 PDF Master？</h2>
+            </div>
+            <div class="features-grid">
+                <div class="feature">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>隐私安全</h3>
+                    <p>所有文件处理都在您的浏览器中完成，不会上传到任何服务器</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>极速处理</h3>
+                    <p>利用 WebAssembly 技术，在本地快速处理您的 PDF 文件</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <i class="fas fa-infinity"></i>
+                    </div>
+                    <h3>无限使用</h3>
+                    <p>完全免费，没有文件数量或大小限制</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>跨平台支持</h3>
+                    <p>在任何设备上都能使用，无需安装任何软件</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>© 2024 PDF Master. 免费在线 PDF 工具，保护您的隐私。</p>
+    </footer>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <i class="fas fa-info-circle"></i>
+        <span id="toastMessage">Message</span>
+    </div>
+
+    <script>
+        // PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const { PDFDocument } = PDFLib;
+
+        // Tool configurations
+        const tools = {
+            merge: {
+                icon: 'fa-object-group',
+                title: '合并 PDF',
+                desc: '将多个 PDF 文件合并为一个文件',
+                multiple: true,
+                options: []
+            },
+            split: {
+                icon: 'fa-cut',
+                title: '拆分 PDF',
+                desc: '按页码范围提取页面',
+                multiple: false,
+                options: [
+                    { type: 'number', id: 'fromPage', label: '起始页', value: 1, min: 1 },
+                    { type: 'number', id: 'toPage', label: '结束页', value: 1, min: 1 }
+                ]
+            },
+            compress: {
+                icon: 'fa-compress-alt',
+                title: '压缩 PDF',
+                desc: '优化 PDF 文件大小',
+                multiple: false,
+                options: []
+            },
+            rotate: {
+                icon: 'fa-sync-alt',
+                title: '旋转 PDF',
+                desc: '旋转页面方向',
+                multiple: false,
+                options: [
+                    { type: 'select', id: 'rotation', label: '旋转角度', options: [
+                        { value: 90, label: '顺时针 90°' },
+                        { value: 180, label: '180°' },
+                        { value: 270, label: '逆时针 90°' }
+                    ]}
+                ]
+            },
+            delete: {
+                icon: 'fa-trash-alt',
+                title: '删除页面',
+                desc: '删除 PDF 中的指定页面',
+                multiple: false,
+                options: [],
+                showPagesGrid: true
+            },
+            extract: {
+                icon: 'fa-file-export',
+                title: '提取页面',
+                desc: '将指定页面保存为新文件',
+                multiple: false,
+                options: [],
+                showPagesGrid: true
+            }
+        };
+
+        // State
+        let currentTool = null;
+        let uploadedFiles = [];
+        let currentPdfDoc = null;
+        let currentPageNum = 1;
+        let totalPages = 0;
+        let selectedPages = new Set();
+        let resultBlob = null;
+        let resultFileName = '';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setupDragDrop();
+            setupFileInput();
+        });
+
+        // Tool selection
+        function selectTool(toolId) {
+            currentTool = toolId;
+            
+            // Update UI
+            document.querySelectorAll('.tool-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.querySelector(`[data-tool="${toolId}"]`).classList.add('active');
+
+            // Show workspace
+            const workspace = document.getElementById('workspace');
+            const tool = tools[toolId];
+            
+            document.getElementById('workspace-icon').className = `fas ${tool.icon}`;
+            document.getElementById('workspace-title').textContent = tool.title;
+            document.getElementById('workspace-desc').textContent = tool.desc;
+            
+            workspace.classList.add('active');
+            workspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Reset state
+            resetToolState();
+            
+            // Setup options
+            setupOptions(tool);
+            
+            // Setup file input
+            const fileInput = document.getElementById('fileInput');
+            fileInput.multiple = tool.multiple;
+            fileInput.value = '';
+        }
+
+        function closeWorkspace() {
+            document.getElementById('workspace').classList.remove('active');
+            document.querySelectorAll('.tool-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            currentTool = null;
+            resetToolState();
+        }
+
+        function showHome() {
+            closeWorkspace();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function scrollToTools() {
+            document.getElementById('tools').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function setupOptions(tool) {
+            const optionsGrid = document.getElementById('optionsGrid');
+            optionsGrid.innerHTML = '';
+            
+            if (tool.options && tool.options.length > 0) {
+                document.getElementById('optionsSection').classList.remove('hidden');
+                
+                tool.options.forEach(opt => {
+                    const group = document.createElement('div');
+                    group.className = 'option-group';
+                    
+                    const label = document.createElement('label');
+                    label.className = 'option-label';
+                    label.textContent = opt.label;
+                    
+                    let input;
+                    if (opt.type === 'select') {
+                        input = document.createElement('select');
+                        input.className = 'option-input';
+                        opt.options.forEach(o => {
+                            const option = document.createElement('option');
+                            option.value = o.value;
+                            option.textContent = o.label;
+                            input.appendChild(option);
+                        });
+                    } else {
+                        input = document.createElement('input');
+                        input.type = opt.type;
+                        input.className = 'option-input';
+                        input.value = opt.value;
+                        if (opt.min !== undefined) input.min = opt.min;
+                    }
+                    
+                    input.id = opt.id;
+                    
+                    group.appendChild(label);
+                    group.appendChild(input);
+                    optionsGrid.appendChild(group);
+                });
+            } else {
+                document.getElementById('optionsSection').classList.add('hidden');
+            }
+        }
+
+        // Drag & Drop
+        function setupDragDrop() {
+            const dropZone = document.getElementById('dropZone');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.add('dragover');
+                });
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.remove('dragover');
+                });
+            });
+            
+            dropZone.addEventListener('drop', handleDrop);
+            dropZone.addEventListener('click', () => {
+                document.getElementById('fileInput').click();
+            });
+        }
+
+        function setupFileInput() {
+            const fileInput = document.getElementById('fileInput');
+            fileInput.addEventListener('change', handleFileSelect);
+        }
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        async function handleFiles(files) {
+            if (!currentTool) return;
+            
+            const tool = tools[currentTool];
+            const pdfFiles = Array.from(files).filter(f => f.type === 'application/pdf');
+            
+            if (pdfFiles.length === 0) {
+                showToast('请选择 PDF 文件', 'error');
+                return;
+            }
+            
+            if (!tool.multiple && pdfFiles.length > 1) {
+                showToast('此工具仅支持单个文件', 'warning');
+            }
+            
+            const filesToAdd = tool.multiple ? pdfFiles : [pdfFiles[0]];
+            uploadedFiles = filesToAdd;
+            
+            // Show file list
+            updateFileList();
+            
+            // Load PDF for preview
+            if (uploadedFiles.length > 0) {
+                await loadPdfForPreview(uploadedFiles[0]);
+            }
+            
+            // Update UI
+            document.getElementById('uploadSection').classList.add('hidden');
+            document.getElementById('fileListSection').classList.remove('hidden');
+            document.getElementById('previewSection').classList.remove('hidden');
+            
+            if (tool.showPagesGrid) {
+                document.getElementById('pagesGridSection').classList.remove('hidden');
+                await renderPagesGrid();
+            }
+            
+            updateStep(1);
+            document.getElementById('processBtn').disabled = false;
+            
+            showToast(`已加载 ${uploadedFiles.length} 个文件`, 'success');
+        }
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            const fileCount = document.getElementById('fileCount');
+            
+            fileCount.textContent = `${uploadedFiles.length} 个文件`;
+            
+            fileList.innerHTML = uploadedFiles.map((file, index) => `
+                <div class="file-item">
+                    <div class="file-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-meta">
+                            <span>${(file.size / 1024).toFixed(1)} KB</span>
+                            <span>${new Date(file.lastModified).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        ${tools[currentTool].multiple ? `
+                            <button class="file-btn ${index === 0 ? '' : ''}" onclick="moveFile(${index}, -1)" ${index === 0 ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <button class="file-btn" onclick="moveFile(${index}, 1)" ${index === uploadedFiles.length - 1 ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                        ` : ''}
+                        <button class="file-btn remove" onclick="removeFile(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function moveFile(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= uploadedFiles.length) return;
+            
+            const temp = uploadedFiles[index];
+            uploadedFiles[index] = uploadedFiles[newIndex];
+            uploadedFiles[newIndex] = temp;
+            
+            updateFileList();
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            
+            if (uploadedFiles.length === 0) {
+                resetTool();
+            } else {
+                updateFileList();
+                loadPdfForPreview(uploadedFiles[0]);
+            }
+        }
+
+        function addMoreFiles() {
+            document.getElementById('fileInput').click();
+        }
+
+        // PDF Preview
+        async function loadPdfForPreview(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                currentPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                totalPages = currentPdfDoc.numPages;
+                currentPageNum = 1;
+                
+                updatePageCounter();
+                await renderPage(currentPageNum);
+                
+                // Update split options
+                if (currentTool === 'split') {
+                    document.getElementById('toPage').value = totalPages;
+                    document.getElementById('toPage').max = totalPages;
+                }
+            } catch (error) {
+                showToast('无法加载 PDF 文件', 'error');
+                console.error(error);
+            }
+        }
+
+        async function renderPage(pageNum) {
+            if (!currentPdfDoc) return;
+            
+            try {
+                const page = await currentPdfDoc.getPage(pageNum);
+                const canvas = document.getElementById('previewCanvas');
+                const ctx = canvas.getContext('2d');
+                
+                const viewport = page.getViewport({ scale: 1.5 });
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                
+                await page.render({
+                    canvasContext: ctx,
+                    viewport: viewport
+                }).promise;
+                
+                updatePageNav();
+            } catch (error) {
+                console.error('Error rendering page:', error);
+            }
+        }
+
+        function prevPage() {
+            if (currentPageNum > 1) {
+                currentPageNum--;
+                renderPage(currentPageNum);
+                updatePageCounter();
+            }
+        }
+
+        function nextPage() {
+            if (currentPageNum < totalPages) {
+                currentPageNum++;
+                renderPage(currentPageNum);
+                updatePageCounter();
+            }
+        }
+
+        function updatePageCounter() {
+            document.getElementById('pageCounter').textContent = `${currentPageNum} / ${totalPages}`;
+        }
+
+        function updatePageNav() {
+            document.getElementById('prevPage').disabled = currentPageNum <= 1;
+            document.getElementById('nextPage').disabled = currentPageNum >= totalPages;
+        }
+
+        // Pages Grid for delete/extract
+        async function renderPagesGrid() {
+            const grid = document.getElementById('pagesGrid');
+            grid.innerHTML = '';
+            
+            if (!currentPdfDoc) return;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                const thumbnail = document.createElement('div');
+                thumbnail.className = 'page-thumbnail';
+                thumbnail.dataset.page = i;
+                thumbnail.onclick = () => togglePageSelection(i);
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = 120;
+                canvas.height = 170;
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'page-checkbox';
+                checkbox.checked = currentTool === 'extract';
+                checkbox.onclick = (e) => {
+                    e.stopPropagation();
+                    togglePageSelection(i);
+                };
+                
+                const pageNum = document.createElement('div');
+                pageNum.className = 'page-number';
+                pageNum.textContent = `第 ${i} 页`;
+                
+                thumbnail.appendChild(canvas);
+                thumbnail.appendChild(checkbox);
+                thumbnail.appendChild(pageNum);
+                grid.appendChild(thumbnail);
+                
+                // Render thumbnail
+                try {
+                    const page = await currentPdfDoc.getPage(i);
+                    const viewport = page.getViewport({ scale: 0.2 });
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    
+                    await page.render({
+                        canvasContext: ctx,
+                        viewport: viewport
+                    }).promise;
+                } catch (error) {
+                    console.error('Error rendering thumbnail:', error);
+                }
+            }
+            
+            // Initialize selection
+            if (currentTool === 'extract') {
+                for (let i = 1; i <= totalPages; i++) {
+                    selectedPages.add(i);
+                }
+            }
+        }
+
+        function togglePageSelection(pageNum) {
+            const thumbnail = document.querySelector(`.page-thumbnail[data-page="${pageNum}"]`);
+            const checkbox = thumbnail.querySelector('.page-checkbox');
+            
+            if (selectedPages.has(pageNum)) {
+                selectedPages.delete(pageNum);
+                thumbnail.classList.remove('selected');
+                checkbox.checked = false;
+            } else {
+                selectedPages.add(pageNum);
+                thumbnail.classList.add('selected');
+                checkbox.checked = true;
+            }
+        }
+
+        function selectAllPages() {
+            for (let i = 1; i <= totalPages; i++) {
+                selectedPages.add(i);
+                const thumbnail = document.querySelector(`.page-thumbnail[data-page="${i}"]`);
+                if (thumbnail) {
+                    thumbnail.classList.add('selected');
+                    thumbnail.querySelector('.page-checkbox').checked = true;
+                }
+            }
+        }
+
+        function deselectAllPages() {
+            selectedPages.clear();
+            document.querySelectorAll('.page-thumbnail').forEach(thumb => {
+                thumb.classList.remove('selected');
+                thumb.querySelector('.page-checkbox').checked = false;
+            });
+        }
+
+        // Processing
+        async function processFiles() {
+            if (uploadedFiles.length === 0) {
+                showToast('请先上传文件', 'error');
+                return;
+            }
+            
+            // Validation
+            if (currentTool === 'delete' || currentTool === 'extract') {
+                if (selectedPages.size === 0) {
+                    showToast('请至少选择一个页面', 'error');
+                    return;
+                }
+            }
+            
+            // Show progress
+            document.getElementById('fileListSection').classList.add('hidden');
+            document.getElementById('previewSection').classList.add('hidden');
+            document.getElementById('pagesGridSection')?.classList.add('hidden');
+            document.getElementById('optionsSection').classList.add('hidden');
+            document.getElementById('actionBar').classList.add('hidden');
+            document.getElementById('progressSection').classList.remove('hidden');
+            
+            updateStep(2);
+            
+            try {
+                let result;
+                
+                switch (currentTool) {
+                    case 'merge':
+                        result = await processMerge();
+                        break;
+                    case 'split':
+                        result = await processSplit();
+                        break;
+                    case 'compress':
+                        result = await processCompress();
+                        break;
+                    case 'rotate':
+                        result = await processRotate();
+                        break;
+                    case 'delete':
+                        result = await processDelete();
+                        break;
+                    case 'extract':
+                        result = await processExtract();
+                        break;
+                }
+                
+                resultBlob = result.blob;
+                resultFileName = result.fileName;
+                
+                // Show result
+                showResult(result);
+                updateStep(3);
+                
+            } catch (error) {
+                showToast('处理失败: ' + error.message, 'error');
+                console.error(error);
+                resetTool();
+            }
+        }
+
+        async function processMerge() {
+            updateProgress(0, '正在合并文件...');
+            
+            const mergedPdf = await PDFDocument.create();
+            let totalSize = 0;
+            
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const file = uploadedFiles[i];
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await PDFDocument.load(arrayBuffer);
+                const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                
+                pages.forEach(page => mergedPdf.addPage(page));
+                totalSize += file.size;
+                
+                updateProgress(((i + 1) / uploadedFiles.length) * 100, `正在处理: ${file.name}`);
+            }
+            
+            const mergedBytes = await mergedPdf.save();
+            const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+            
+            return {
+                blob,
+                fileName: `merged_${Date.now()}.pdf`,
+                stats: {
+                    '原始文件数': uploadedFiles.length,
+                    '原始大小': formatBytes(totalSize),
+                    '合并后大小': formatBytes(blob.size),
+                    '总页数': mergedPdf.getPageCount()
+                }
+            };
+        }
+
+        async function processSplit() {
+            updateProgress(20, '正在读取文件...');
+            
+            const fromPage = parseInt(document.getElementById('fromPage').value);
+            const toPage = parseInt(document.getElementById('toPage').value);
+            
+            if (fromPage > toPage || fromPage < 1 || toPage > totalPages) {
+                throw new Error('无效的页码范围');
+            }
+            
+            const file = uploadedFiles[0];
+            const arrayBuffer = await file.arrayBuffer();
+            
+            updateProgress(50, '正在提取页面...');
+            
+            const pdf = await PDFDocument.load(arrayBuffer);
+            const newPdf = await PDFDocument.create();
+            
+            const pageIndices = [];
+            for (let i = fromPage - 1; i < toPage; i++) {
+                pageIndices.push(i);
+            }
+            
+            const pages = await newPdf.copyPages(pdf, pageIndices);
+            pages.forEach(page => newPdf.addPage(page));
+            
+            updateProgress(80, '正在保存...');
+            
+            const pdfBytes = await newPdf.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            
+            const originalName = file.name.replace('.pdf', '');
+            
+            return {
+                blob,
+                fileName: `${originalName}_pages_${fromPage}-${toPage}.pdf`,
+                stats: {
+                    '原始页数': totalPages,
+                    '提取页数': toPage - fromPage + 1,
+                    '页码范围': `${fromPage} - ${toPage}`
+                }
+            };
+        }
+
+        async function processCompress() {
+            updateProgress(20, '正在分析文件...');
+            
+            const file = uploadedFiles[0];
+            const arrayBuffer = await file.arrayBuffer();
+            const originalSize = file.size;
+            
+            updateProgress(50, '正在压缩...');
+            
+            const pdf = await PDFDocument.load(arrayBuffer);
+            
+            updateProgress(80, '正在优化...');
+            
+            const pdfBytes = await pdf.save({
+                useObjectStreams: true,
+                addDefaultPage: false
+            });
+            
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const compressionRatio = ((originalSize - blob.size) / originalSize * 100).toFixed(1);
+            
+            const originalName = file.name.replace('.pdf', '');
+            
+            return {
+                blob,
+                fileName: `${originalName}_compressed.pdf`,
+                stats: {
+                    '原始大小': formatBytes(originalSize),
+                    '压缩后大小': formatBytes(blob.size),
+                    '压缩率': compressionRatio + '%'
+                }
+            };
+        }
+
+        async function processRotate() {
+            updateProgress(20, '正在读取文件...');
+            
+            const rotation = parseInt(document.getElementById('rotation').value);
+            const file = uploadedFiles[0];
+            const arrayBuffer = await file.arrayBuffer();
+            
+            updateProgress(50, '正在旋转页面...');
+            
+            const pdf = await PDFDocument.load(arrayBuffer);
+            const pages = pdf.getPages();
+            
+            pages.forEach(page => {
+                page.setRotation({ angle: rotation });
+            });
+            
+            updateProgress(80, '正在保存...');
+            
+            const pdfBytes = await pdf.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            
+            const originalName = file.name.replace('.pdf', '');
+            const rotationText = rotation === 90 ? '顺时针90' : rotation === 180 ? '180' : '逆时针90';
+            
+            return {
+                blob,
+                fileName: `${originalName}_rotated_${rotationText}.pdf`,
+                stats: {
+                    '总页数': pages.length,
+                    '旋转角度': rotation + '°',
+                    '文件大小': formatBytes(blob.size)
+                }
+            };
+        }
+
+        async function processDelete() {
+            updateProgress(20, '正在读取文件...');
+            
+            if (selectedPages.size === totalPages) {
+                throw new Error('不能删除所有页面');
+            }
+            
+            const file = uploadedFiles[0];
+            const arrayBuffer = await file.arrayBuffer();
+            
+            updateProgress(50, '正在删除页面...');
+            
+            const pdf = await PDFDocument.load(arrayBuffer);
+            const newPdf = await PDFDocument.create();
+            
+            const pagesToKeep = [];
+            for (let i = 0; i < totalPages; i++) {
+                if (!selectedPages.has(i + 1)) {
+                    pagesToKeep.push(i);
+                }
+            }
+            
+            const pages = await newPdf.copyPages(pdf, pagesToKeep);
+            pages.forEach(page => newPdf.addPage(page));
+            
+            updateProgress(80, '正在保存...');
+            
+            const pdfBytes = await newPdf.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            
+            const originalName = file.name.replace('.pdf', '');
+            
+            return {
+                blob,
+                fileName: `${originalName}_deleted.pdf`,
+                stats: {
+                    '原始页数': totalPages,
+                    '删除页数': selectedPages.size,
+                    '剩余页数': pagesToKeep.length
+                }
+            };
+        }
+
+        async function processExtract() {
+            updateProgress(20, '正在读取文件...');
+            
+            const file = uploadedFiles[0];
+            const arrayBuffer = await file.arrayBuffer();
+            
+            updateProgress(50, '正在提取页面...');
+            
+            const pdf = await PDFDocument.load(arrayBuffer);
+            const newPdf = await PDFDocument.create();
+            
+            const pageIndices = Array.from(selectedPages).map(p => p - 1).sort((a, b) => a - b);
+            const pages = await newPdf.copyPages(pdf, pageIndices);
+            pages.forEach(page => newPdf.addPage(page));
+            
+            updateProgress(80, '正在保存...');
+            
+            const pdfBytes = await newPdf.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            
+            const originalName = file.name.replace('.pdf', '');
+            
+            return {
+                blob,
+                fileName: `${originalName}_extracted.pdf`,
+                stats: {
+                    '原始页数': totalPages,
+                    '提取页数': selectedPages.size,
+                    '页码': Array.from(selectedPages).sort((a, b) => a - b).join(', ')
+                }
+            };
+        }
+
+        // Progress
+        function updateProgress(percent, text) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressPercent').textContent = Math.round(percent) + '%';
+            if (text) {
+                document.getElementById('progressText').textContent = text;
+            }
+        }
+
+        // Result
+        function showResult(result) {
+            document.getElementById('progressSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+            
+            const statsContainer = document.getElementById('resultStats');
+            statsContainer.innerHTML = Object.entries(result.stats).map(([key, value]) => `
+                <div class="stat">
+                    <div class="stat-value">${value}</div>
+                    <div class="stat-label">${key}</div>
+                </div>
+            `).join('');
+        }
+
+        function downloadResult() {
+            if (!resultBlob) return;
+            
+            const url = URL.createObjectURL(resultBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = resultFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('文件下载已开始', 'success');
+        }
+
+        // Steps
+        function updateStep(step) {
+            document.querySelectorAll('.step').forEach((el, i) => {
+                el.classList.remove('active', 'completed');
+                if (i < step - 1) {
+                    el.classList.add('completed');
+                } else if (i === step - 1) {
+                    el.classList.add('active');
+                }
+            });
+            
+            document.querySelectorAll('.step-connector').forEach((el, i) => {
+                el.classList.toggle('completed', i < step - 1);
+            });
+        }
+
+        // Reset
+        function resetTool() {
+            resetToolState();
+            document.getElementById('uploadSection').classList.remove('hidden');
+            document.getElementById('fileListSection').classList.add('hidden');
+            document.getElementById('previewSection').classList.add('hidden');
+            document.getElementById('pagesGridSection')?.classList.add('hidden');
+            document.getElementById('optionsSection').classList.add('hidden');
+            document.getElementById('progressSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('actionBar').classList.remove('hidden');
+            document.getElementById('processBtn').disabled = true;
+            
+            updateProgress(0, '请稍候');
+            updateStep(1);
+            
+            // Re-setup options
+            if (currentTool) {
+                setupOptions(tools[currentTool]);
+            }
+        }
+
+        function resetToolState() {
+            uploadedFiles = [];
+            currentPdfDoc = null;
+            currentPageNum = 1;
+            totalPages = 0;
+            selectedPages.clear();
+            resultBlob = null;
+            resultFileName = '';
+            document.getElementById('fileInput').value = '';
+        }
+
+        // Toast
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toast.className = `toast ${type}`;
+            toastMessage.textContent = message;
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-times-circle',
+                warning: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            
+            toast.querySelector('i').className = `fas ${icons[type]}`;
+            
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Utilities
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+    </script>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>Made with ❤️ | PDF Master - 免费在线PDF工具箱 | 所有操作均在浏览器本地完成，保护您的隐私</p>
+        </div>
+    </footer>
+</body>
+</html>
